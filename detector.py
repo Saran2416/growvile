@@ -12,13 +12,6 @@ import numpy as np
 MODEL_CACHE = Path("models")
 
 
-COCO_TARGETS = {
-    "person", "bicycle", "car", "motorcycle", "bus", "truck", "bottle",
-    "cup", "chair", "tv", "laptop", "cell phone", "backpack", "book",
-    "keyboard", "mouse", "remote", "clock", "scissors", "handbag",
-}
-
-
 @dataclass
 class DetectorConfig:
     model: str = "yolov8n.pt"
@@ -130,8 +123,6 @@ class UnifiedDetector:
                 result.boxes.cls.cpu().numpy().astype(int),
             ):
                 label = names[class_id]
-                if label not in COCO_TARGETS:
-                    continue
                 bbox = [int(round(value)) for value in box]
                 item = {"object": label, "confidence": round(float(confidence), 4), "bbox": bbox}
                 if label == "bottle":
