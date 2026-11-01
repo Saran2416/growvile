@@ -1,0 +1,10 @@
+# Optional features. Install only the lines you need.
+#
+# Hands, fingers and faces (adds ~300-400 MB RSS):
+mediapipe>=0.10.14,<1.0
+#
+# Kaggle dataset download for custom fine-tuning:
+kaggle>=1.6
+#
+# Open-vocabulary text labels for YOLO-World:
+git+https://github.com/ultralytics/CLIP.git

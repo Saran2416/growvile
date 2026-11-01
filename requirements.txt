@@ -1,11 +1,18 @@
+# Core runtime: one small model, camera, image inference and API.
 ultralytics>=8.3.0
-opencv-python-headless>=4.10.0
+# GUI build so camera.py can open a window. On a server with no display you can
+# replace this with opencv-python-headless.
+opencv-python>=4.10.0
 numpy>=1.26.0
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 python-multipart>=0.0.9
 Pillow>=10.0.0
-# Optional specialized backend. MediaPipe currently publishes wheels for selected
-# Python versions; install it when a compatible interpreter is available.
-mediapipe>=0.10.14,<1.0
+requests>=2.31.0
 pytest>=8.0.0
+
+# Optional backends are not installed by default because they add RAM or are
+# only needed for fine-tuning:
+#   mediapipe>=0.10.14,<1.0     hands/faces (+300-400 MB RSS)
+#   kaggle>=1.6                 Kaggle dataset downloads
+#   git+https://github.com/ultralytics/CLIP.git   YOLO-World text labels

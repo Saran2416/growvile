@@ -1,0 +1,79 @@
+{
+  "_meta": {
+    "note": "Guidance for the coconut classes used by this project. Sources: TNAU Agritech Portal (coconut disease pages), CPCRI leaf-rot technical bulletin, and published work on Pestalotiopsis palmarum and Opisina arenosella. This is general agricultural information, not a substitute for a local extension service or a licensed agronomist. Always follow the product label and local regulations before applying any pesticide.",
+    "classes": 7,
+    "default_plant": "Coconut",
+    "plant_scientific": "Cocos nucifera"
+  },
+  "Bud Rot": {
+    "plant": "Coconut",
+    "disease": "Bud Rot",
+    "healthy": false,
+    "pathogen": "Phytophthora palmivora (oomycete)",
+    "cause": "Spores survive in infected palm tissue and soil and are splashed or blown onto the crown during wet, humid weather, especially in the monsoon. Young palms and wounded or waterlogged crowns are most susceptible. The pathogen rots the soft tissues at the base of the spear leaf, so the growing point is destroyed.",
+    "symptoms": "One or two young leaves turn yellow; the spear (spindle) turns pale, breaks at its base and hangs down. The tender leaf bases and crown rot into a slimy, foul-smelling mass, and the whole crown eventually falls off.",
+    "cure": "Remove and burn the rotted crown tissue as soon as symptoms appear. Clean the affected area and apply Bordeaux paste or copper oxychloride paste to the cut surfaces, and drench the crown with a labelled phosphonate or copper fungicide. Severely affected palms with a completely rotted bud cannot be saved and should be cut down and destroyed.",
+    "prevention": "Avoid wounding the crown, provide good drainage, do not irrigate overhead in humid weather, remove and destroy infected palms, and keep the crown dry where possible. Inspect palms regularly at the start of the monsoon."
+  },
+  "Gray Leaf Spot": {
+    "plant": "Coconut",
+    "disease": "Gray Leaf Spot",
+    "healthy": false,
+    "pathogen": "Pestalotiopsis palmarum (fungus)",
+    "cause": "Air- and rain-borne spores of Pestalotiopsis land on coconut leaflets and infect them, particularly in warm, humid weather and on palms weakened by poor nutrition, drought stress or overcrowding. Old and damaged leaves are infected first.",
+    "symptoms": "Small brown spots on the leaflets that enlarge and develop a grey or whitish centre with a dark brown to black margin. Spots coalesce into irregular blighted areas, and heavily affected leaflets dry out and turn brown from the tip.",
+    "cure": "Prune off and burn badly affected fronds. Spray the crown with a labelled fungicide such as mancozeb, copper oxychloride or carbendazim, repeating at the interval on the label. Correct any nutrient deficiency at the same time, because stressed palms recover poorly.",
+    "prevention": "Maintain balanced fertiliser application (especially potassium and magnesium), avoid overcrowding, remove fallen and dead fronds, and avoid overhead irrigation that keeps the canopy wet for long periods."
+  },
+  "Leaf Rot": {
+    "plant": "Coconut",
+    "disease": "Leaf Rot",
+    "healthy": false,
+    "pathogen": "Colletotrichum gloeosporioides, Exserohilum rostratum and Fusarium spp. (fungal complex)",
+    "cause": "A complex of weak fungal pathogens invades the spear leaf and adjacent young leaves, mainly on palms already weakened by root (wilt) disease or poor nutrition. Continuous humid, rainy weather allows the lesions to spread and rot the unopened leaf.",
+    "symptoms": "Water-soaked brown lesions appear on the spear leaves; they enlarge and merge into extensive rotting. As the leaf unfurls the rotten lamina dries and breaks off in the wind, giving the frond a flattened 'fan' shape. In severe cases the spear fails to unfurl at all.",
+    "cure": "Remove the rotten portions of the spear and the two adjacent leaves. Pour a solution of hexaconazole (2 ml) or mancozeb (3 g) in 300 ml of water into the base of the spindle leaf, and spray the crown with 1% Bordeaux mixture, 0.5% copper oxychloride or 0.4% mancozeb during January, April-May and September. Two to three rounds are usually enough for mild infections.",
+    "prevention": "Manage root (wilt) disease and correct nutrient deficiencies, because leaf rot follows weakened palms. Keep the crown well drained, avoid overhead irrigation, and remove and destroy rotten spear tissue promptly."
+  },
+  "Stem Bleeding": {
+    "plant": "Coconut",
+    "disease": "Stem Bleeding",
+    "healthy": false,
+    "pathogen": "Thielaviopsis paradoxa (fungus, also called Ceratocystis paradoxa)",
+    "cause": "The fungus enters through wounds, cracks and injuries on the trunk, often after mechanical damage, lightning, insect injury or in palms already affected by Ganoderma basal stem rot. Rain splash and contaminated cutting tools spread the spores. Waterlogging and poor drainage favour the disease.",
+    "symptoms": "A dark reddish-brown liquid oozes from longitudinal cracks and wounds on the trunk and dries into a rusty stain. The tissue under the bleeding point decays, the bark becomes brittle and peels off in flakes, and the palm gradually weakens and may die.",
+    "cure": "Chisel out the discoloured tissue down to healthy wood and apply Bordeaux paste or copper oxychloride paste to the wound. Drench the root zone and trunk base with a labelled systemic fungicide such as hexaconazole. Palms with extensive trunk rot should be removed and destroyed.",
+    "prevention": "Avoid injuring the trunk, disinfect pruning and harvesting tools, provide good drainage, avoid waterlogging around the base, and remove and burn severely affected palms. Watch for and manage basal stem rot, which often accompanies stem bleeding."
+  },
+  "CCI_Caterpillars": {
+    "plant": "Coconut",
+    "disease": "Coconut Caterpillar Infestation (black-headed caterpillar)",
+    "healthy": false,
+    "pathogen": "Opisina arenosella (black-headed caterpillar, a pest insect - not a disease)",
+    "cause": "Moth larvae feed on the undersides of the leaflets and live under silken galleries they spin, so the damage is hidden from above. Outbreaks are favoured by dry, warm weather and by the absence of natural enemies; the pest spreads to neighbouring palms as the larvae and moths move.",
+    "symptoms": "Patches of dried, grey-brown leaflets with the green tissue eaten away, leaving only the midribs in severe cases. Silken galleries, caterpillar frass and cast skins are visible on the leaflet undersides, and sooty mould may grow on the honeydew.",
+    "cure": "Release biological control agents such as the parasitoids Goniozus nephantidis and Bracon brevicornis, or spray Bacillus thuringiensis or a labelled insect growth regulator / diamide insecticide on the leaflet undersides. Cut and burn heavily infested fronds and remove the galleries.",
+    "prevention": "Monitor the undersides of fronds regularly, conserve natural enemies, avoid excessive nitrogen which produces soft susceptible foliage, and remove and destroy infested fronds before the caterpillars spread to neighbouring palms."
+  },
+  "Healthy_Leaves": {
+    "plant": "Coconut",
+    "disease": "Healthy",
+    "healthy": true,
+    "pathogen": null,
+    "cause": "No disease or pest infestation detected.",
+    "symptoms": "Uniform green leaflets with no spots, lesions, bleeding, galleries or dried patches.",
+    "cure": "No treatment needed.",
+    "prevention": "Keep up normal care: balanced fertiliser, good drainage, adequate spacing and regular inspection of new fronds and the crown."
+  },
+  "Not_Coconut": {
+    "plant": "Unknown",
+    "disease": "Not a coconut leaf",
+    "healthy": false,
+    "recognized": false,
+    "pathogen": null,
+    "cause": "The image does not match the coconut leaf classes this model was trained on, so no diagnosis is made.",
+    "symptoms": "",
+    "cure": "No treatment is given. This result is a rejection, not a diagnosis.",
+    "prevention": "Point the camera at a coconut frond that fills most of the frame, in good light, and try again."
+  }
+}
