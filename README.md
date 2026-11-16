@@ -224,7 +224,11 @@ explicit `Not_Coconut` rejection class trained on real non-coconut leaf photos.
 # learn) and a held-out set of unseen species + Makerere beans for testing
 .venv/bin/python fetch_negatives.py
 
-# merge them into one ImageFolder tree (hard links, ~8.6k images)
+# add 460 featureless frames (flat colour, gradients, noise, stripes) so a
+# blank wall or lens cap is rejected instead of scored as a healthy leaf
+.venv/bin/python make_synthetic_negatives.py
+
+# merge them into one ImageFolder tree (hard links, ~9.1k images)
 .venv/bin/python prepare_coconut_dataset.py
 ```
 
@@ -242,40 +246,61 @@ species.
 
 ### Train
 
+The shipped checkpoint is trained in two stages on CPU. Stage 1 learns the
+seven classes:
+
 ```bash
 .venv/bin/python train_plant.py --data datasets/coconut/merged \
     --epochs 12 --freeze-epochs 3 --max-per-class 1000 --imgsz 224 \
     --batch 32 --workers 2 --threads 4 --output runs/coconut
 ```
 
+Stage 2 continues from that checkpoint with stronger augmentation:
+
+```bash
+.venv/bin/python train_plant.py --data datasets/coconut/merged \
+    --epochs 6 --freeze-epochs 0 --max-per-class 1000 --imgsz 224 \
+    --batch 32 --workers 2 --threads 4 --lr-finetune 5e-5 \
+    --augment strong --init runs/coconut/best.pt --output runs/coconut
+```
+
 The first epochs train only the classification head with the backbone frozen,
 then the whole network is fine-tuned at a lower learning rate. On a 4-core CPU
-this takes a few minutes per epoch. Small classes are up-weighted with
+one epoch takes about 3 minutes. Small classes are up-weighted with
 `--class-weights sqrt` (default); use `--class-weights none` to disable it.
+`--augment strong` adds vertical flips, stronger colour jitter, grayscale,
+blur and random erasing, which is what makes a continuation run useful.
 Checkpoints are selected by top-1 accuracy first, then by lower validation
-loss, so training keeps improving after accuracy saturates. Per-class
-precision/recall/F1 is written to `runs/coconut/metrics.json`.
+loss. Per-class precision/recall/F1 is written to `runs/coconut/metrics.json`.
 
-With these settings the shipped run reached **99.55% top-1** on the internal
-20% validation split (4,466 train / 1,117 validation images: 917 coconut plus
-200 `Not_Coconut`). It stopped at epoch 9 with the best checkpoint at epoch 4;
-per-class recall was 98.5–100% and precision 98.5–100%. The only errors were
-2 Gray Leaf Spot and 3 Leaf Rot leaves. That split contains many near-duplicate
-photos of the same palms, so treat it as "it learned these classes", not as a
-field-accuracy guarantee.
+The shipped run reached **99.19% top-1** on the internal 20% validation split
+(4,466 train / 1,117 validation images: 917 coconut plus 200 `Not_Coconut`,
+92 of them synthetic). Coconut-only accuracy is **99.24%** (910/917); the
+remaining errors are Leaf Rot and Gray Leaf Spot leaves that look alike. That
+split contains many near-duplicate photos of the same palms, so treat it as
+"it learned these classes", not as a field-accuracy guarantee.
 
 The harder test is rejection of species the model never trained on. Run
 `evaluate_rejection.py` to reproduce it: on **746 held-out leaves from eight
 unseen species** (blueberry, cherry, peach, raspberry, soybean, squash,
-strawberry and Makerere beans), **99.5%** were rejected as `Not_Coconut`
-(742/746; per species 99.0–100%), while coconut validation recall stayed
-**99.5%** (912/917). A missed rejection is reported as a coconut disease, so
-keep the frond in frame and treat low-confidence results with caution.
+strawberry and Makerere beans), **99.7%** were rejected as `Not_Coconut`
+(744/746; per species 99.0–100%), while coconut recall on the validation
+split stayed **99.4%** (323/325). A missed rejection is reported as a coconut
+disease, so keep the frond in frame and treat low-confidence results with
+caution.
 
-Training on the larger negative set (2,224 PlantDoc leaves instead of 800) was
-what raised rejection from 97.5% to 99.5%; a featureless or blurry frame can
-still land on a coconut class, so use the live camera's `Uncertain` state or
-check the printed confidence before acting on a result.
+Three rounds of data and training changes each fixed a measured failure:
+
+1. Adding the first 800 PlantDoc negatives made out-of-scope leaves rejectable.
+2. Using all 2,224 PlantDoc negatives raised rejection from 97.5% to 99.5%.
+3. Adding 460 synthetic featureless frames and the stage-2 continuation run
+   raised rejection to 99.7% and fixed the blank-frame case: a flat wall,
+   solid colour or lens cap is now reported as `NOT COCONUT` (69–90%)
+   instead of `HEALTHY`. Blurred and very dark coconut leaves are still
+   classified correctly.
+
+The live camera shows `Uncertain` below `--threshold 0.5`, so use that state
+or check the printed confidence before acting on a result.
 
 ### Run
 
@@ -314,7 +339,7 @@ Environment variables: `YOLO_MODEL`, `BROAD=1`, `CONFIDENCE`, `DEVICE`,
 
 ```bash
 .venv/bin/python -m pytest -q
-# 32 passed
+# 34 passed
 ```
 
 The tests do not require a camera or network. They cover the output contract,
@@ -356,6 +381,7 @@ memory before rejecting an oversized upload.
 | `plant_camera.py` | Live/webcam or single-image coconut health check |
 | `prepare_coconut_dataset.py` | Merge the raw coconut Kaggle datasets |
 | `fetch_negatives.py` | Download non-coconut leaves for rejection training/testing |
+| `make_synthetic_negatives.py` | Generate featureless frames so blank input is rejected |
 | `evaluate_rejection.py` | Measure non-coconut rejection and coconut recall |
 | `data/coconut_diseases.json` | Cause/cure knowledge base, including `Not_Coconut` |
 | `data/objects.example.yaml` | Template for a custom YOLO dataset |

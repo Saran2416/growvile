@@ -261,6 +261,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--output", default="runs/coconut")
+    parser.add_argument(
+        "--init",
+        default=None,
+        help="warm-start from an existing checkpoint instead of ImageNet weights",
+    )
+    parser.add_argument(
+        "--augment",
+        choices=("basic", "strong"),
+        default="basic",
+        help="strong adds vertical flips, blur and random erasing for continuation runs",
+    )
     parser.add_argument("--device", default=None)
     parser.add_argument("--inspect", action="store_true", help="only print class counts and exit")
     return parser
@@ -300,7 +311,11 @@ def main() -> None:
             print(f"  {count:6d}  {name}")
         return
 
-    train_set = TransformSubset(dataset, train_indices, build_train_transform(args.imgsz))
+    train_set = TransformSubset(
+        dataset,
+        train_indices,
+        build_train_transform(args.imgsz, strong=args.augment == "strong"),
+    )
     val_set = TransformSubset(dataset, val_indices, build_eval_transform(args.imgsz))
     train_loader = DataLoader(
         train_set,
@@ -319,6 +334,21 @@ def main() -> None:
     )
 
     model = build_model(args.arch, len(dataset.classes), pretrained=True).to(device)
+    if args.init:
+        init_path = Path(args.init)
+        if not init_path.exists():
+            raise SystemExit(f"No checkpoint at {init_path}")
+        checkpoint = torch.load(init_path, map_location=device, weights_only=True)
+        if checkpoint.get("arch") not in (None, args.arch):
+            raise SystemExit(
+                f"{init_path} was trained with {checkpoint['arch']}, not {args.arch}"
+            )
+        if checkpoint.get("classes") not in (None, dataset.classes):
+            raise SystemExit(
+                f"{init_path} classes do not match the dataset classes"
+            )
+        model.load_state_dict(checkpoint["state_dict"])
+        print(f"Init    : {init_path} (top1 {checkpoint.get('val_accuracy', 0) * 100:.2f}%)")
     weights = class_weights(dataset, train_indices, args.class_weights)
     if weights is not None:
         weights = weights.to(device)

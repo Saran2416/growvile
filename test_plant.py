@@ -177,6 +177,40 @@ def test_trained_checkpoint_has_the_rejection_class():
     assert NEGATIVE_CLASS in payload["classes"]
 
 
+def test_synthetic_negatives_are_deterministic_and_cleanable(tmp_path):
+    from make_synthetic_negatives import SIZE, clean, generate
+
+    written = generate(tmp_path, count=6, seed=3)
+    files = sorted(tmp_path.glob("synthetic_*.jpg"))
+    assert written == 6
+    assert len(files) == 6
+    first = [path.read_bytes() for path in files]
+
+    generate(tmp_path, count=6, seed=3)
+    assert [path.read_bytes() for path in files] == first
+
+    import cv2
+
+    image = cv2.imread(str(files[0]))
+    assert image is not None
+    assert image.shape == (SIZE, SIZE, 3)
+    assert image.dtype == np.uint8
+
+    assert clean(tmp_path) == 6
+    assert not list(tmp_path.glob("synthetic_*.jpg"))
+
+
+def test_strong_train_transform_produces_a_normalised_tensor():
+    from PIL import Image
+
+    from plant import build_train_transform
+
+    image = Image.fromarray(np.zeros((320, 240, 3), dtype=np.uint8))
+    tensor = build_train_transform(224, strong=True)(image)
+    assert tuple(tensor.shape) == (3, 224, 224)
+    assert float(tensor.mean()) < 1.0
+
+
 def test_center_crop_is_square_and_inside_frame():
     from plant_camera import center_crop
 

@@ -139,17 +139,35 @@ def freeze_backbone(model, frozen: bool = True) -> None:
         parameter.requires_grad = True
 
 
-def build_train_transform(imgsz: int):
+def build_train_transform(imgsz: int, strong: bool = False):
     from torchvision import transforms
 
+    if not strong:
+        return transforms.Compose(
+            [
+                transforms.RandomResizedCrop(imgsz, scale=(0.7, 1.0)),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomRotation(15),
+                transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+                transforms.ToTensor(),
+                transforms.Normalize(MEAN, STD),
+            ]
+        )
+
+    # Continuation runs start from an already accurate checkpoint, so the
+    # regularisation has to be stronger than in the first run to keep helping.
     return transforms.Compose(
         [
-            transforms.RandomResizedCrop(imgsz, scale=(0.7, 1.0)),
+            transforms.RandomResizedCrop(imgsz, scale=(0.55, 1.0), ratio=(0.8, 1.25)),
             transforms.RandomHorizontalFlip(),
-            transforms.RandomRotation(15),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+            transforms.RandomVerticalFlip(),
+            transforms.RandomRotation(20),
+            transforms.ColorJitter(brightness=0.35, contrast=0.35, saturation=0.3, hue=0.05),
+            transforms.RandomGrayscale(p=0.1),
+            transforms.RandomApply([transforms.GaussianBlur(3)], p=0.2),
             transforms.ToTensor(),
             transforms.Normalize(MEAN, STD),
+            transforms.RandomErasing(p=0.25, scale=(0.02, 0.15), ratio=(0.5, 2.0)),
         ]
     )
 
