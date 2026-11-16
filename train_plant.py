@@ -328,6 +328,7 @@ def main() -> None:
     optimizer = torch.optim.AdamW(classifier_parameters(model), lr=args.lr_head, weight_decay=1e-4)
     unfrozen = False
     best_accuracy = 0.0
+    best_loss = float("inf")
     best_epoch = 0
     history: list[dict[str, float]] = []
     output = Path(args.output)
@@ -362,8 +363,12 @@ def main() -> None:
             }
         )
 
-        if top1 > best_accuracy:
+        # Prefer higher top-1 accuracy, then lower validation loss. Validation
+        # accuracy saturates quickly on this dataset, so the loss tie-break
+        # keeps training while the checkpoint is still improving.
+        if top1 > best_accuracy or (top1 == best_accuracy and val_loss < best_loss):
             best_accuracy = top1
+            best_loss = val_loss
             best_epoch = epoch
             payload = {
                 "arch": args.arch,

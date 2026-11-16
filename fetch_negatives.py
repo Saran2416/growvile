@@ -217,7 +217,7 @@ def download_set(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download non-coconut leaf negatives")
-    parser.add_argument("--plantdoc-train-per-label", type=int, default=40,
+    parser.add_argument("--plantdoc-train-per-label", type=int, default=0,
                         help="images per training label (0 = all)")
     parser.add_argument("--plantdoc-holdout-per-label", type=int, default=100,
                         help="images per held-out label (0 = all)")

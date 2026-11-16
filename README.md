@@ -220,11 +220,11 @@ explicit `Not_Coconut` rejection class trained on real non-coconut leaf photos.
 .venv/bin/kaggle datasets download -d amandapriyashantha/coconut-leaf-diseases \
     -p datasets/coconut/raw/amandapriyashantha --unzip
 
-# add the Not_Coconut class (~800 PlantDoc leaves from species the model may
+# add the Not_Coconut class (~2,200 PlantDoc leaves from species the model may
 # learn) and a held-out set of unseen species + Makerere beans for testing
 .venv/bin/python fetch_negatives.py
 
-# merge them into one ImageFolder tree (hard links, ~7.2k images)
+# merge them into one ImageFolder tree (hard links, ~8.6k images)
 .venv/bin/python prepare_coconut_dataset.py
 ```
 
@@ -244,7 +244,7 @@ species.
 
 ```bash
 .venv/bin/python train_plant.py --data datasets/coconut/merged \
-    --epochs 6 --freeze-epochs 4 --max-per-class 300 --imgsz 224 \
+    --epochs 12 --freeze-epochs 3 --max-per-class 1000 --imgsz 224 \
     --batch 32 --workers 2 --threads 4 --output runs/coconut
 ```
 
@@ -252,21 +252,30 @@ The first epochs train only the classification head with the backbone frozen,
 then the whole network is fine-tuned at a lower learning rate. On a 4-core CPU
 this takes a few minutes per epoch. Small classes are up-weighted with
 `--class-weights sqrt` (default); use `--class-weights none` to disable it.
-Per-class precision/recall/F1 is written to `runs/coconut/metrics.json`.
+Checkpoints are selected by top-1 accuracy first, then by lower validation
+loss, so training keeps improving after accuracy saturates. Per-class
+precision/recall/F1 is written to `runs/coconut/metrics.json`.
 
-With these settings the shipped run reached **100.0% top-1** on the internal
-held-out 20% validation split (385 images: 325 coconut + 60 `Not_Coconut`),
-with precision/recall/F1 of 1.000 for every class. That split contains many
-near-duplicate photos of the same palms, so treat it as "it learned these
-classes", not as a field-accuracy guarantee.
+With these settings the shipped run reached **99.55% top-1** on the internal
+20% validation split (4,466 train / 1,117 validation images: 917 coconut plus
+200 `Not_Coconut`). It stopped at epoch 9 with the best checkpoint at epoch 4;
+per-class recall was 98.5–100% and precision 98.5–100%. The only errors were
+2 Gray Leaf Spot and 3 Leaf Rot leaves. That split contains many near-duplicate
+photos of the same palms, so treat it as "it learned these classes", not as a
+field-accuracy guarantee.
 
 The harder test is rejection of species the model never trained on. Run
 `evaluate_rejection.py` to reproduce it: on **746 held-out leaves from eight
 unseen species** (blueberry, cherry, peach, raspberry, soybean, squash,
-strawberry and Makerere beans), **97.5%** were rejected as `Not_Coconut`
-(per species 95.0–100%), while coconut validation recall stayed **100%**
-(325/325). A missed rejection is reported as a coconut disease, so keep the
-frond in frame and treat low-confidence results with caution.
+strawberry and Makerere beans), **99.5%** were rejected as `Not_Coconut`
+(742/746; per species 99.0–100%), while coconut validation recall stayed
+**99.5%** (912/917). A missed rejection is reported as a coconut disease, so
+keep the frond in frame and treat low-confidence results with caution.
+
+Training on the larger negative set (2,224 PlantDoc leaves instead of 800) was
+what raised rejection from 97.5% to 99.5%; a featureless or blurry frame can
+still land on a coconut class, so use the live camera's `Uncertain` state or
+check the printed confidence before acting on a result.
 
 ### Run
 
