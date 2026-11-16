@@ -120,10 +120,10 @@ def test_headless_camera_loop(monkeypatch):
         def isOpened(self):
             return True
 
-        def get(self, prop):
+        def get(self, _prop):
             return 640
 
-        def set(self, prop, value):
+        def set(self, _prop, _value):
             return True
 
         def read(self):

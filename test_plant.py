@@ -172,7 +172,7 @@ def test_trained_checkpoint_has_the_rejection_class():
     path = Path("runs/coconut/best.pt")
     if not path.exists():
         pytest.skip("no trained checkpoint")
-    payload = torch.load(path, map_location="cpu", weights_only=False)
+    payload = torch.load(path, map_location="cpu", weights_only=True)
     assert set(COCONUT_CLASSES) <= set(payload["classes"])
     assert NEGATIVE_CLASS in payload["classes"]
 

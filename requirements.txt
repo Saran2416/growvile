@@ -7,8 +7,12 @@ numpy>=1.26.0
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 python-multipart>=0.0.9
-Pillow>=10.0.0
+Pillow>=13.0.0
 requests>=2.31.0
+# Transitive dependencies with security floors; keep these explicit so a stale
+# environment is upgraded instead of silently reusing a vulnerable version.
+urllib3>=2.8.0
+filelock>=4.2.1
 pytest>=8.0.0
 
 # Optional backends are not installed by default because they add RAM or are

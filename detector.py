@@ -1,4 +1,4 @@
-"""Unified open-model object detector.
+"""growvile open-model object detector.
 
 The default backend is a small YOLOv8 model pretrained on the 80 COCO classes.
 The "nano" checkpoint is chosen on purpose: it is about 6 MB on disk and keeps
@@ -18,9 +18,10 @@ from __future__ import annotations
 
 import gc
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import cv2
 import numpy as np
@@ -47,7 +48,6 @@ class DetectorConfig:
     model: str = "yolov8n.pt"
     confidence: float = 0.25
     device: str | None = None
-    bottle_subtype_model: str | None = None
 
     # Inference settings.  640 is accurate; 416-480 is much faster on CPU.
     imgsz: int = 640
@@ -89,7 +89,6 @@ class UnifiedDetector:
         self.mp_task_mode = False
         if self.config.mediapipe:
             self._load_mediapipe()
-        self.subtype_model = self._load_subtype_model(self.config.bottle_subtype_model)
         gc.collect()
 
     # ------------------------------------------------------------------ setup
@@ -155,7 +154,8 @@ class UnifiedDetector:
         for filename, url in assets.items():
             path = MODEL_CACHE / filename
             if not path.exists():
-                urllib.request.urlretrieve(url, path)
+                # Fixed HTTPS URLs owned by the MediaPipe project; no user input.
+                urllib.request.urlretrieve(url, path)  # nosec B310
         vision = mp.tasks.vision
         base = mp.tasks.BaseOptions
         self.mp_hands = vision.HandLandmarker.create_from_options(
@@ -175,39 +175,7 @@ class UnifiedDetector:
         )
         self.mp_task_mode = True
 
-    @staticmethod
-    def _load_subtype_model(model_path: str | None) -> Any:
-        if not model_path or not Path(model_path).exists():
-            return None
-        import torch
-        from torchvision.models import mobilenet_v2
-
-        checkpoint = torch.load(model_path, map_location="cpu")
-        classes = checkpoint.get("classes", ["water_bottle", "sauce_bottle"])
-        model = mobilenet_v2(weights=None)
-        model.classifier[1] = torch.nn.Linear(model.last_channel, len(classes))
-        model.load_state_dict(checkpoint["model"])
-        model.eval()
-        return model, classes
-
     # -------------------------------------------------------------- detection
-    def _bottle_subtype(self, image: np.ndarray, bbox: list[int]) -> tuple[str, float] | None:
-        if self.subtype_model is None:
-            return None
-        import torch
-        from PIL import Image
-        from torchvision.models import MobileNet_V2_Weights
-
-        model, classes = self.subtype_model
-        x1, y1, x2, y2 = bbox
-        crop = image[max(0, y1):max(y1 + 1, y2), max(0, x1):max(x1 + 1, x2)]
-        transform = MobileNet_V2_Weights.DEFAULT.transforms()
-        tensor = transform(Image.fromarray(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)))
-        with torch.inference_mode():
-            probabilities = torch.softmax(model(tensor.unsqueeze(0)), dim=1)[0]
-        index = int(probabilities.argmax())
-        return classes[index], round(float(probabilities[index]), 4)
-
     def _yolo_detections(self, image: np.ndarray) -> list[dict[str, Any]]:
         kwargs: dict[str, Any] = {
             "conf": self.config.confidence,
@@ -231,12 +199,8 @@ class UnifiedDetector:
                 result.boxes.cls.cpu().numpy().astype(int),
             ):
                 label = names[class_id]
-                bbox = [int(round(value)) for value in box]
+                bbox = [round(value) for value in box]
                 item = {"object": label, "confidence": round(float(confidence), 4), "bbox": bbox}
-                if label == "bottle":
-                    subtype = self._bottle_subtype(image, bbox)
-                    if subtype is not None:
-                        item["subtype"], item["subtype_confidence"] = subtype
                 detections.append(item)
         return detections
 
@@ -339,7 +303,6 @@ class UnifiedDetector:
                 "open_images": open_images,
                 "open_vocabulary": bool(self.config.world_classes),
                 "mediapipe_hands_face": self.mp_hands is not None and self.mp_face is not None,
-                "bottle_subtype": self.subtype_model is not None,
             },
             "model": str(self.model_name),
             "imgsz": self.config.imgsz,

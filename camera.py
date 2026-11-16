@@ -91,7 +91,7 @@ def run_camera(
     show_window = not headless
     if show_window:
         try:
-            cv2.namedWindow("Open Object Detector", cv2.WINDOW_NORMAL)
+            cv2.namedWindow("growvile", cv2.WINDOW_NORMAL)
         except cv2.error:
             print("No display available; continuing headless.", file=sys.stderr)
             show_window = False
@@ -153,7 +153,7 @@ def run_camera(
 
             if show_window:
                 try:
-                    cv2.imshow("Open Object Detector", frame)
+                    cv2.imshow("growvile", frame)
                     if cv2.waitKey(1) & 0xFF in (27, ord("q")):
                         break
                 except cv2.error:

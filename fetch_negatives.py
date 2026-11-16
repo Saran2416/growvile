@@ -28,6 +28,7 @@ import argparse
 import io
 import json
 import random
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -179,7 +180,7 @@ def download_set(
 ) -> int:
     tasks: list[tuple[str, int, str, Path]] = []
     for label, items in selected.items():
-        safe = label.replace(" ", "_")
+        safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", label).strip("._") or "image"
         folder = output / safe if per_label_dir else output
         for row_index, url in items:
             tasks.append((label, row_index, url, folder / f"{prefix}_{safe}_{row_index:05d}.jpg"))

@@ -20,8 +20,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import time
 import textwrap
+import time
 from typing import Any
 
 import cv2

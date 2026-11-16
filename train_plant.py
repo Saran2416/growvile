@@ -117,7 +117,7 @@ def stratified_split(dataset, val_fraction: float, max_per_class: int, seed: int
         if len(indices) < 2:
             train_indices.extend(indices)
             continue
-        val_count = max(1, int(round(len(indices) * val_fraction)))
+        val_count = max(1, round(len(indices) * val_fraction))
         val_count = min(val_count, len(indices) - 1)
         val_indices.extend(indices[:val_count])
         train_indices.extend(indices[val_count:])
@@ -130,7 +130,7 @@ def stratified_split(dataset, val_fraction: float, max_per_class: int, seed: int
 def evaluate(model, loader, device: str) -> tuple[float, float, float]:
     """Return (loss, top1 accuracy, top3 accuracy)."""
     import torch
-    import torch.nn as nn
+    from torch import nn
 
     criterion = nn.CrossEntropyLoss()
     model.eval()
@@ -269,7 +269,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     import torch
-    import torch.nn as nn
+    from torch import nn
     from torch.utils.data import DataLoader
     from torchvision.datasets import ImageFolder
 
@@ -381,7 +381,7 @@ def main() -> None:
 
     best_path = output / "best.pt"
     if best_path.exists():
-        checkpoint = torch.load(best_path, map_location=device, weights_only=False)
+        checkpoint = torch.load(best_path, map_location=device, weights_only=True)
         model.load_state_dict(checkpoint["state_dict"])
     class_report = per_class_metrics(model, val_loader, dataset.classes, device)
     print("\nPer-class validation metrics:")
@@ -423,7 +423,7 @@ def main() -> None:
 
     print(f"Best top1: {best_accuracy * 100:.2f}% (epoch {best_epoch})")
     print(f"Checkpoint: {output / 'best.pt'}")
-    print(f"Try it    : .venv/bin/python plant_camera.py --image leaf.jpg")
+    print("Try it    : .venv/bin/python plant_camera.py --image leaf.jpg")
 
 
 if __name__ == "__main__":

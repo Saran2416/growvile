@@ -97,7 +97,7 @@ def load_meta(path: str | Path = KNOWLEDGE_FILE) -> dict[str, Any]:
 
 def build_model(arch: str, num_classes: int, pretrained: bool = False):
     """Create a torchvision classifier with a fresh head."""
-    import torch.nn as nn
+    from torch import nn
     from torchvision import models
 
     if arch not in ARCHITECTURES:
@@ -127,8 +127,6 @@ def build_model(arch: str, num_classes: int, pretrained: bool = False):
 
 def classifier_parameters(model):
     """Return the parameters that make up the classification head."""
-    import torch.nn as nn
-
     head = model.fc if hasattr(model, "fc") else model.classifier
     return list(head.parameters())
 
@@ -202,7 +200,7 @@ class PlantClassifier:
             torch.set_num_threads(threads)
 
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        payload = torch.load(path, map_location=self.device, weights_only=False)
+        payload = torch.load(path, map_location=self.device, weights_only=True)
         classes = payload.get("classes")
         if not classes:
             raise ValueError(f"{path} does not contain class names; retrain with train_plant.py")

@@ -9,7 +9,6 @@ Environment variables:
 * ``IMGSZ``             inference size (default ``640``; ``416`` is cheaper)
 * ``MEDIAPIPE``         ``1`` to add hands/faces (uses ~300-400 MB more RAM)
 * ``WORLD_CLASSES``     comma-separated open-vocabulary labels
-* ``BOTTLE_SUBTYPE_MODEL`` optional bottle classifier checkpoint
 * ``THREADS``           PyTorch CPU thread count
 * ``MAX_UPLOAD_MB``     reject larger uploads (default ``20``)
 """
@@ -25,8 +24,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 
 from detector import DetectorConfig, UnifiedDetector, parse_classes
 
-
-app = FastAPI(title="Open Object Detector", version="1.1.0")
+app = FastAPI(title="growvile", version="1.1.0")
 
 
 def _flag(name: str) -> bool:
@@ -47,7 +45,6 @@ def get_detector() -> UnifiedDetector:
             max_det=int(os.getenv("MAX_DET", "100")),
             mediapipe=_flag("MEDIAPIPE"),
             world_classes=world_classes,
-            bottle_subtype_model=os.getenv("BOTTLE_SUBTYPE_MODEL") or None,
             threads=int(os.getenv("THREADS", str(min(4, os.cpu_count() or 1)))),
         )
     )
@@ -60,8 +57,10 @@ def health() -> dict[str, str]:
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)) -> dict:
-    content = await file.read()
     limit = float(os.getenv("MAX_UPLOAD_MB", "20")) * 1_000_000
+    # Read at most one byte over the limit so a large upload cannot exhaust
+    # memory before it is rejected.
+    content = await file.read(int(limit) + 1)
     if len(content) > limit:
         raise HTTPException(status_code=413, detail=f"Upload is larger than {limit / 1e6:.0f} MB")
     image = cv2.imdecode(np.frombuffer(content, dtype=np.uint8), cv2.IMREAD_COLOR)

@@ -1,8 +1,10 @@
-# Open Object Detector
+# growvile
 
-Real-time object detection for images, webcams and a local FastAPI service.
-The default model is a small YOLOv8 checkpoint that runs on CPU and keeps the
-whole process under roughly **500 MB of RAM**.
+Real-time coconut leaf health checks plus general object detection for images,
+webcams and a local FastAPI service. The detector is a small YOLOv8 checkpoint
+that runs on CPU and keeps the whole process under roughly **500 MB of RAM**;
+the coconut classifier reports the plant, infection status, disease, cause and
+cure from a curated knowledge base.
 
 ## What "every object" means
 
@@ -11,7 +13,7 @@ A detector can only recognise the classes it was trained on. The default
 bicycle, bottle, cup, chair, laptop, phone, dog, cat, and so on. It does not
 know every object in the world.
 
-This project gives you three ways to go beyond the 80 COCO classes:
+growvile gives you three ways to go beyond the 80 COCO classes:
 
 1. **Broad mode** (`--broad`): `yolov8n-oiv7.pt` is the same 7 MB nano model,
    but trained on **601 Open Images V7 classes** — clothing, furniture, animals,
@@ -297,17 +299,36 @@ curl -X POST -F file=@samples/bus.jpg http://127.0.0.1:8000/predict
 ```
 
 Environment variables: `YOLO_MODEL`, `BROAD=1`, `CONFIDENCE`, `DEVICE`,
-`IMGSZ`, `MEDIAPIPE=1`, `WORLD_CLASSES`, `BOTTLE_SUBTYPE_MODEL`, `THREADS`,
-`MAX_UPLOAD_MB`.
+`IMGSZ`, `MEDIAPIPE=1`, `WORLD_CLASSES`, `THREADS`, `MAX_UPLOAD_MB`.
 
 ## Tests
 
 ```bash
 .venv/bin/python -m pytest -q
+# 32 passed
 ```
 
 The tests do not require a camera or network. They cover the output contract,
-class parsing, memory reporting, drawing, and a fake headless camera loop.
+class parsing, memory reporting, drawing, the rejection class, and a fake
+headless camera loop.
+
+## Security checks
+
+```bash
+.venv/bin/python -m pip install bandit pip-audit
+.venv/bin/python -m bandit -r . -x ./.venv,./datasets,./runs,./models,./.git
+.venv/bin/python -m pip_audit -r requirements.txt
+```
+
+The latest run found **no medium or high severity issues** and **no known
+dependency vulnerabilities** (the full environment was also audited after
+upgrading Pillow, urllib3, filelock and setuptools). Remaining low-severity
+notes are ordinary test assertions, the seeded RNG used for dataset splits,
+best-effort cleanup blocks, and the Kaggle CLI wrapper, which runs a validated
+argument list without a shell. Model checkpoints are loaded with
+`torch.load(..., weights_only=True)`, so a checkpoint cannot execute arbitrary
+pickle code, and `/predict` streams at most `MAX_UPLOAD_MB + 1` bytes into
+memory before rejecting an oversized upload.
 
 ## Files
 
