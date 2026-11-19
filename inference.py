@@ -2,8 +2,8 @@
 
 Image::
 
-    .venv/bin/python inference.py samples/bus.jpg
-    .venv/bin/python inference.py samples/bus.jpg --save output.jpg
+    .venv/bin/python inference.py samples/coconut_leaf.jpg
+    .venv/bin/python inference.py samples/coconut_leaf.jpg --save output.jpg
 
 Camera::
 
@@ -53,6 +53,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="comma-separated open-vocabulary labels (YOLO-World)",
     )
+    parser.add_argument(
+        "--coconut-only",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="only report detections for known coconut conditions (default: true)",
+    )
     parser.add_argument("--world-model", default="yolov8s-worldv2.pt")
     parser.add_argument("--save", nargs="?", const="", metavar="PATH", help="save annotated image")
     parser.add_argument("--webcam", action="store_true")
@@ -81,6 +87,7 @@ def main() -> None:
         world_classes=parse_classes(args.classes),
         world_model=args.world_model,
         threads=args.threads,
+        coconut_only=args.coconut_only,
     )
 
     if args.webcam:

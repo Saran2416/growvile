@@ -36,6 +36,7 @@ def get_detector() -> UnifiedDetector:
     world_classes = parse_classes(os.getenv("WORLD_CLASSES"))
     broad = _flag("BROAD") and not world_classes
     default_model = "yolov8n-oiv7.pt" if broad else "yolov8n.pt"
+    coconut_only = os.getenv("COCONUT_ONLY", "1").strip().lower() not in {"", "0", "false", "no", "off"}
     return UnifiedDetector(
         DetectorConfig(
             model=os.getenv("YOLO_MODEL") or default_model,
@@ -46,6 +47,7 @@ def get_detector() -> UnifiedDetector:
             mediapipe=_flag("MEDIAPIPE"),
             world_classes=world_classes,
             threads=int(os.getenv("THREADS", str(min(4, os.cpu_count() or 1)))),
+            coconut_only=coconut_only,
         )
     )
 

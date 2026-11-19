@@ -2,7 +2,7 @@
 
 Examples
 --------
-Default (80 COCO classes, ~450 MB RSS on CPU)::
+Default (coconut-only, ~450 MB RSS on CPU)::
 
     .venv/bin/python camera.py
 
@@ -10,9 +10,9 @@ Faster on a weak CPU::
 
     .venv/bin/python camera.py --imgsz 416 --every 2
 
-Arbitrary labels (downloads a YOLO-World checkpoint, needs CLIP)::
+Opt out of coconut-only mode to inspect arbitrary objects::
 
-    .venv/bin/python camera.py --classes "person, cup, fan, book, dog, laptop"
+    .venv/bin/python camera.py --no-coconut-only
 
 Headless smoke test that reads three frames and exits::
 
@@ -240,6 +240,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=os.getenv("WORLD_CLASSES") or None,
         help="comma-separated open-vocabulary labels (YOLO-World)",
     )
+    parser.add_argument(
+        "--coconut-only",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="only report detections for known coconut conditions (default: true)",
+    )
     parser.add_argument("--world-model", default="yolov8s-worldv2.pt")
     parser.add_argument(
         "--mediapipe",
@@ -269,6 +275,7 @@ def main() -> None:
         world_classes=parse_classes(args.classes),
         world_model=args.world_model,
         threads=args.threads,
+        coconut_only=args.coconut_only,
     )
     summary = run_camera(
         config,

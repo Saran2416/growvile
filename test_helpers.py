@@ -19,6 +19,8 @@ def test_detector_defaults_are_low_memory():
     assert config.mediapipe is False
     assert config.world_classes is None
     assert config.imgsz == 640
+    # The tool must only ever surface coconut-tree / infection detections.
+    assert config.coconut_only is True
 
 
 def test_detector_passes_size_and_max_det_to_yolo(monkeypatch):
@@ -31,6 +33,10 @@ def test_detector_passes_size_and_max_det_to_yolo(monkeypatch):
 
         def __init__(self, model):
             self.model = model
+            self.classes = None
+
+        def set_classes(self, classes):
+            self.classes = classes
 
         def predict(self, image, **kwargs):
             captured.update(kwargs)

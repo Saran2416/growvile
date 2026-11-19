@@ -135,7 +135,7 @@ def main() -> None:
     save_dir = Path(getattr(results, "save_dir", Path(args.project) / args.name))
     best = save_dir / "weights" / "best.pt"
     print(f"Best weights: {best}")
-    print(f"Use with: .venv/bin/python inference.py samples/bus.jpg --model {best}")
+    print(f"Use with: .venv/bin/python inference.py samples/coconut_leaf.jpg --model {best}")
 
 
 if __name__ == "__main__":

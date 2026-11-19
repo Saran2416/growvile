@@ -1,31 +1,25 @@
 # growvile
 
-Real-time coconut leaf health checks plus general object detection for images,
-webcams and a local FastAPI service. The detector is a small YOLOv8 checkpoint
-that runs on CPU and keeps the whole process under roughly **500 MB of RAM**;
-the coconut classifier reports the plant, infection status, disease, cause and
-cure from a curated knowledge base.
+Real-time coconut leaf health checks for images, webcams and a local FastAPI
+service. The detector is a small YOLOv8 checkpoint that runs on CPU; in
+coconut-only mode it uses the YOLO-World backend with coconut condition labels
+and keeps the process around **1.2 GB of RAM**; the coconut classifier reports
+the plant, infection status, disease, cause and cure from a curated knowledge
+base.
 
-## What "every object" means
+## What "coconut-only" means
 
-A detector can only recognise the classes it was trained on. The default
-`yolov8n.pt` model is trained on the **80 COCO classes** — person, car, bus,
-bicycle, bottle, cup, chair, laptop, phone, dog, cat, and so on. It does not
-know every object in the world.
+The detector runs in coconut-only mode by default: only detections whose label
+is one of the coconut conditions (`Bud Rot`, `Gray Leaf Spot`, `Leaf Rot`,
+`Stem Bleeding`, `CCI_Caterpillars`, `Healthy_Leaves`) are reported. A COCO
+class like `bus`, `person` or `stop sign` is filtered out before it reaches the
+caller, so the tool never presents a non-coconut object as a coconut tree or an
+infected part.
 
-growvile gives you three ways to go beyond the 80 COCO classes:
-
-1. **Broad mode** (`--broad`): `yolov8n-oiv7.pt` is the same 7 MB nano model,
-   but trained on **601 Open Images V7 classes** — clothing, furniture, animals,
-   food, vehicles, tools, and many more. Memory use is unchanged (~450 MB).
-2. **Open vocabulary** (`--classes`): a YOLO-World checkpoint accepts any
-   labels you type at runtime, for example `fan`, `book`, `mug`, or `door`.
-3. **Fine-tuning**: train on your own labelled dataset (Kaggle or local) so the
-   model learns exactly the categories you care about.
-
-The model never claims to detect categories it has not learned. Broad mode has
-more classes but lower per-class accuracy than COCO, so pick the trade-off that
-fits your scene.
+Because the COCO and Open Images back-ends have no coconut classes, coconut-only
+mode detects through the **YOLO-World** open-vocabulary backend with the curated
+coconut condition labels (`yolov8s-worldv2.pt`); pass `--classes` to use other
+coconut labels.
 
 ## Measured memory use
 
@@ -33,6 +27,7 @@ On this machine (4 CPU cores, no CUDA GPU, CPU-only PyTorch):
 
 | Setup | Resident memory (RSS) |
 | --- | --- |
+| YOLO-World, coconut labels (`yolov8s-worldv2.pt`) | ~1.1–1.2 GB |
 | YOLOv8n, COCO-80 (`yolov8n.pt`) | ~450–500 MB |
 | YOLOv8n + MediaPipe hands/faces | ~800–820 MB |
 | Inference size 480 instead of 640 | similar RAM, lower CPU per frame |
@@ -47,17 +42,20 @@ python -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 
 # image
-.venv/bin/python inference.py samples/bus.jpg
+.venv/bin/python inference.py samples/coconut_leaf.jpg
+
+# image, saving an annotated copy next to the input (coconut_annotated.jpg here)
+.venv/bin/python inference.py samples/coconut_leaf.jpg --save coconut_annotated.jpg
 
 # live camera
 .venv/bin/python camera.py
 
-# 601-class broad mode (same model size and RAM)
-.venv/bin/python camera.py --broad
+# report every detection from the underlying model (opt out of coconut-only)
+.venv/bin/python camera.py --no-coconut-only
 ```
 
-The first run downloads the YOLO weights (about 6 MB). Press `q` or `Esc` in the
-camera window to quit.
+The first run downloads the YOLO-World weights (about 25 MB) plus the CLIP text
+encoder (about 350 MB); press `q` or `Esc` in the camera window to quit.
 
 ## Camera
 
@@ -79,13 +77,17 @@ Useful flags:
 
 | Flag | Purpose |
 | --- | --- |
-| `--broad` | 601 Open Images classes instead of 80 COCO classes |
+| `--coconut-only` | Only report known coconut conditions (default) |
+| `--no-coconut-only` | Report every detection from the underlying model |
+| `--broad` | 601 Open Images classes instead of 80 COCO classes (overridden by coconut-only unless `--no-coconut-only`) |
 | `--imgsz 416` | Smaller inference size, faster on CPU |
 | `--every 2` | Detect every second frame and reuse the boxes |
 | `--threads 2` | Cap PyTorch CPU threads |
 | `--max-rss 700` | Stop if the process grows above 700 MB |
 | `--mediapipe` | Add hands, fingers and faces (+300–400 MB) |
-| `--classes "person,cup,fan"` | Open-vocabulary labels via YOLO-World |
+| `--classes "Bud Rot, Gray Leaf Spot, Healthy"` | Open-vocabulary labels via YOLO-World |
+| `--world-model path.pt` | Custom YOLO-World checkpoint to use with `--classes` |
+| `--output demo.mp4` | Record the annotated stream to an MP4 file |
 | `--headless` | No OpenCV window (servers, SSH, tests) |
 
 The status line shows FPS, inference time, RAM and the active backend. Detection
@@ -94,23 +96,20 @@ is allocated per detection.
 
 ## Open-vocabulary labels
 
-YOLO-World is not the default because it needs the CLIP text encoder. Install
-it once, then pass labels:
+The coconut-only detector uses the **YOLO-World** open-vocabulary backend with
+the curated coconut condition labels; install the CLIP text encoder once, then
+pass labels:
 
 ```bash
 .venv/bin/python -m pip install "git+https://github.com/ultralytics/CLIP.git"
-.venv/bin/python camera.py --classes "person, cup, fan, book, laptop, dog"
-```
-
-```bash
-.venv/bin/python inference.py samples/bus.jpg --classes "person, bus, wheel"
+.venv/bin/python inference.py samples/coconut_leaf.jpg --classes "Bud Rot, Gray Leaf Spot, Healthy"
 ```
 
 The first run downloads `yolov8s-worldv2.pt` (~25 MB) plus the CLIP text
-encoder (~350 MB), and uses roughly **1.1–1.2 GB of RAM** while running. A
-custom YOLO-World checkpoint can be supplied with `--model path/to/world.pt`.
-If you do not need arbitrary labels, the default COCO or `--broad` modes are
-much lighter (~450 MB).
+encoder (~350 MB), and uses roughly **1.1–1.2 GB** of RAM while running. Use
+`--world-model path/to/world.pt` (on `camera.py` or `inference.py`) for a
+different YOLO-World checkpoint; `--model` works too when combined with
+`--classes`.
 
 ## Train on a Kaggle dataset
 
@@ -154,13 +153,14 @@ The best checkpoint is written to `runs/detect/train/weights/best.pt`. Use it
 directly:
 
 ```bash
-.venv/bin/python inference.py samples/bus.jpg --model runs/detect/train/weights/best.pt
+.venv/bin/python inference.py samples/coconut_leaf.jpg --model runs/detect/train/weights/best.pt
 .venv/bin/python camera.py --model runs/detect/train/weights/best.pt
 ```
 
-If your dataset has no `data.yaml`, copy `data/objects.example.yaml`, list your
-class names in index order, and point `path` at the dataset folder. For a
-larger model change `--model yolov8s.pt`, but expect more RAM and slower frames.
+If your dataset has no `data.yaml`, create one with the standard YOLO layout and
+list the coconut class names in index order, then point `path` at the dataset
+folder. For a larger model change `--model yolov8s.pt`, but expect more RAM and
+slower frames.
 
 ## Training on CPU (no GPU)
 
@@ -315,31 +315,55 @@ or check the printed confidence before acting on a result.
 .venv/bin/python plant_camera.py --image leaf.jpg --json
 ```
 
-Hold one frond or a group of leaflets so it fills most of the centre of the
-frame; the classifier is not a detector and does not crop for you. The model
-runs in about 50 MB on CPU, so it can run alongside the YOLO detector.
+Hold one frond or a group of leaflets so it fills most of the frame. This is a
+classifier, not a detector: in live mode the centre square is cropped
+automatically (`--crop 0.85` by default), while `--image` uses the whole image.
+Tune `--crop` if the leaf is cut off or too much background remains.
+
+| Flag | Purpose |
+| --- | --- |
+| `--crop 0.85` | Centre-square fraction used in live mode (ignored for `--image`) |
+| `--every 5` | Classify every N frames and reuse the last result |
+| `--threshold 0.5` | Confidence below this shows `Uncertain` in the overlay |
+| `--top-k 3` | Number of alternative predictions listed for `--image` |
+| `--headless`, `--frames 3` | No window / stop after N frames |
+| `--json` | Print the single-image result as JSON |
+
+The checkpoint is about 6 MB and per-frame classification is light enough to
+run alongside the YOLO detector. Importing `torch`/`torchvision` accounts for
+most of the memory cost (~330 MB extra RSS when this classifier is the first
+model loaded in a fresh process); that cost is largely avoided when the YOLO
+detector has already loaded them.
 
 If the image is not a coconut leaf, the output starts with `NOT COCONUT` and
-the model prints **no cause and no cure**; it explicitly refuses to diagnose
-out-of-scope input. The `recognized` field in `--json` output and in the API
-summary is `false` for those results.
+prints an explanation plus "No diagnosis or treatment is given for this
+image." — no disease cause or cure is reported. It explicitly refuses to
+diagnose out-of-scope input. The `recognized` field in `--json` output and in
+the camera summary is `false` for those results.
 
 ## API
 
 ```bash
 .venv/bin/python -m uvicorn app:app --reload
 curl http://127.0.0.1:8000/health
-curl -X POST -F file=@samples/bus.jpg http://127.0.0.1:8000/predict
+curl -X POST -F file=@samples/coconut_leaf.jpg http://127.0.0.1:8000/predict
 ```
 
 Environment variables: `YOLO_MODEL`, `BROAD=1`, `CONFIDENCE`, `DEVICE`,
-`IMGSZ`, `MEDIAPIPE=1`, `WORLD_CLASSES`, `THREADS`, `MAX_UPLOAD_MB`.
+`IMGSZ`, `MEDIAPIPE=1`, `WORLD_CLASSES`, `COCONUT_ONLY`, `THREADS`, `MAX_DET`,
+`MAX_UPLOAD_MB` (default 20 MB). `COCONUT_ONLY=0` turns the coconut-only filter
+off for the API.
+
+`/predict` returns `detections` (object, confidence, bbox), `backends`,
+`model`, `imgsz`, `memory_mb`, `filename` and `image_size`; `/health` returns
+`{"status": "ok"}`. The plant classifier is a separate CLI and is not exposed
+through this API.
 
 ## Tests
 
 ```bash
 .venv/bin/python -m pytest -q
-# 34 passed
+# 37 passed
 ```
 
 The tests do not require a camera or network. They cover the output contract,
@@ -384,16 +408,19 @@ memory before rejecting an oversized upload.
 | `make_synthetic_negatives.py` | Generate featureless frames so blank input is rejected |
 | `evaluate_rejection.py` | Measure non-coconut rejection and coconut recall |
 | `data/coconut_diseases.json` | Cause/cure knowledge base, including `Not_Coconut` |
-| `data/objects.example.yaml` | Template for a custom YOLO dataset |
+| `requirements.txt` | Core runtime dependencies |
 | `requirements-optional.txt` | MediaPipe, Kaggle and CLIP extras |
+| `test_detector.py`, `test_helpers.py`, `test_plant.py` | Pytest suite (no camera or network needed) |
 
 ## Limitations
 
-- "Every object" is not achievable with a fixed-class detector. Use `--broad`
-  (601 classes), open-vocabulary labels, or train on your own dataset for new
-  categories.
-- COCO has no clothing, fan, or dedicated head class. MediaPipe adds `face`,
-  `hand`, and five finger tips.
+- Coconut-only mode means the tool reports just the coconut conditions above;
+  use `--no-coconut-only` to inspect arbitrary objects with the COCO or Open
+  Images models.
+- COCO has no dedicated coconut class, so a plain `yolov8n.pt` backend reports no
+  coconut boxes until a coconut-trained detection checkpoint is used; the
+  coconut leaf classifier (`plant_camera.py`) is what diagnoses the plant from
+  foliage.
 - Open-vocabulary and MediaPipe modes use noticeably more memory than plain COCO.
 - A CPU-only machine will not reach high frame rates with larger checkpoints;
   stay on `yolov8n` and an inference size of 416–480.

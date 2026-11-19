@@ -12,6 +12,14 @@ Optional backends:
 * ``world_classes=(...)`` switches to a YOLO-World checkpoint, which can detect
   arbitrary labels supplied at runtime.  It needs the CLIP text encoder, so it
   uses more memory than plain COCO detection.
+
+Coconut-only mode
+-----------------
+
+``coconut_only`` is on by default.  Only detections whose label is one of the
+coconut conditions in :data:`COCONUT_LABELS` are returned, so the tool reports a
+coconut tree or an infected part and nothing else.  A COCO-classified bus,
+person, stop sign or chair is dropped before it ever reaches the caller.
 """
 
 from __future__ import annotations
@@ -27,6 +35,19 @@ import cv2
 import numpy as np
 
 MODEL_CACHE = Path("models")
+
+# Labels that belong to the coconut workflow: the conditions the plant
+# classifier knows about (Bud Rot, Gray Leaf Spot, ...) plus the healthy state.
+# ``Not_Coconut`` is a *rejection*, not a detection, so it is not part of the
+# allowlist; the plant classifier reports it as such.
+COCONUT_LABELS: tuple[str, ...] = (
+    "Bud Rot",
+    "Gray Leaf Spot",
+    "Leaf Rot",
+    "Stem Bleeding",
+    "CCI_Caterpillars",
+    "Healthy_Leaves",
+)
 
 
 def parse_classes(value: str | Iterable[str] | None) -> tuple[str, ...] | None:
@@ -61,6 +82,11 @@ class DetectorConfig:
     world_classes: tuple[str, ...] | None = None
     world_model: str = "yolov8s-worldv2.pt"
 
+    # Only report detections whose label is a known coconut condition.
+    # Defaults to on so the tool never surfaces non-coconut objects; disable
+    # with --no-coconut-only (CLI) or COCONUT_ONLY=0 (env / API).
+    coconut_only: bool = True
+
     # Limit PyTorch's CPU thread pool.  None keeps the library default.
     threads: int | None = None
 
@@ -75,14 +101,24 @@ class UnifiedDetector:
         from ultralytics import YOLO
 
         model_name = self.config.model
-        if self.config.world_classes and model_name == DetectorConfig.model:
-            # The user asked for open-vocabulary labels but did not name a
-            # specific checkpoint, so pick the small YOLO-World model.
+        world_classes = self.config.world_classes
+        if self.config.coconut_only and not world_classes:
+            # Coconut-only mode with no explicit labels: detect the curated
+            # coconut condition labels through the open-vocabulary backend,
+            # because the COCO and Open Images back-ends have no coconut class.
+            world_classes = COCONUT_LABELS
+        if world_classes and (model_name == DetectorConfig.model or self.config.coconut_only):
+            # Explicit labels or coconut-only mode use the small YOLO-World
+            # checkpoint, unless the user named a world model themselves.
             model_name = self.config.world_model
+        if world_classes and not self.config.world_classes:
+            # Coconut-only mode filled in the curated coconut labels; keep the
+            # config in sync so backend reporting sees them.
+            self.config.world_classes = world_classes
 
         self.model_name = model_name
         self.yolo = YOLO(model_name)
-        self._load_world_classes()
+        self._load_world_classes(world_classes)
 
         self.mp_hands = None
         self.mp_face = None
@@ -102,8 +138,9 @@ class UnifiedDetector:
             torch.set_num_threads(self.config.threads)
         return bool(torch.cuda.is_available())
 
-    def _load_world_classes(self) -> None:
-        if not self.config.world_classes:
+    def _load_world_classes(self, world_classes: tuple[str, ...] | None = None) -> None:
+        labels = world_classes if world_classes is not None else self.config.world_classes
+        if not labels:
             return
         if not hasattr(self.yolo, "set_classes"):
             raise RuntimeError(
@@ -111,7 +148,7 @@ class UnifiedDetector:
                 "Re-run without --classes, or use --model yolov8s-worldv2.pt."
             )
         try:
-            self.yolo.set_classes(list(self.config.world_classes))
+            self.yolo.set_classes(list(labels))
         except Exception as exc:  # pragma: no cover - depends on optional CLIP
             raise RuntimeError(
                 "YOLO-World needs the CLIP text encoder. Install it with "
@@ -288,8 +325,21 @@ class UnifiedDetector:
         return detections
 
     def predict(self, image: np.ndarray) -> list[dict[str, Any]]:
-        """Return every detection for one BGR frame."""
-        return self._yolo_detections(image) + self._specialized_detections(image)
+        """Return every detection for one BGR frame.
+
+        In coconut-only mode (the default) detections whose label is not one of
+        :data:`COCONUT_LABELS` are dropped, so a bus, person or stop sign is never
+        reported as a coconut tree or infected part.  Disable the filter with
+        ``--no-coconut-only`` (CLI) or ``COCONUT_ONLY=0`` (env / API).
+        """
+        detections = self._yolo_detections(image) + self._specialized_detections(image)
+        if self.config.coconut_only:
+            detections = [
+                item
+                for item in detections
+                if str(item.get("object")) in COCONUT_LABELS
+            ]
+        return detections
 
     def predict_with_status(self, image: np.ndarray) -> dict[str, Any]:
         """Return detections together with the active backends and memory use."""

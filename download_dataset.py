@@ -240,7 +240,7 @@ def main() -> None:
     else:
         print(
             "No data.yaml was found. Point --data at the dataset's YOLO config, "
-            "or create one from data/objects.example.yaml."
+            "or start from the coconut class lists in data/."
         )
 
 
